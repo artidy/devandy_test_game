@@ -1,11 +1,23 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { TelegramModule } from './telegram/telegram.module';
+import { validateEnvironments } from './env.validation';
+import { telegramConfig } from '../config/telegram.config';
+import { ENV_FILE_PATH } from './app.const';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ConfigModule.forRoot({
+        cache: true,
+        isGlobal: true,
+        envFilePath: ENV_FILE_PATH,
+        load: [telegramConfig],
+        validate: validateEnvironments,
+    }),
+    TelegramModule
+  ],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}
