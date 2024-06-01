@@ -4,17 +4,22 @@ import TelegramBot, { InlineKeyboardButton } from 'node-telegram-bot-api';
 
 import { GameClass } from '@devandy-test-game/shared';
 import { telegramConfig } from '../../config/telegram.config';
+import { PlayerService } from '../player/player.service';
+import { PlayerModule } from '../player/player.module';
 
-@Module({})
+@Module({
+  imports: [PlayerModule]
+})
 export class TelegramModule implements OnModuleInit {
   private bot: TelegramBot;
   private game: GameClass;
   private messageIds: Map<number, number> = new Map();
 
-  constructor(@Inject (telegramConfig.KEY) private readonly config: ConfigType<typeof telegramConfig>,) {
+  constructor(
+    @Inject (telegramConfig.KEY) private readonly config: ConfigType<typeof telegramConfig>,
+    private readonly playerService: PlayerService,
+    ) {
     this.game = new GameClass();
-    const botPlayer = this.game.registerPlayer(0, "Великий герой");
-    this.game.players.set(0, botPlayer);
   }
   async onModuleInit() {
     this.bot = new TelegramBot(
@@ -22,20 +27,26 @@ export class TelegramModule implements OnModuleInit {
       { polling: true }
     );
 
-    this.bot.onText(/\/start/, (msg) => {
+    this.bot.onText(/\/start/, async (msg) => {
       const chatData = msg.chat;
       const chatId = chatData.id;
       const playerName = `${chatData.first_name} ${chatData.last_name}`;
 
-      const player = this.game.registerPlayer(chatId, playerName);
-      this.game.players.set(chatId, player);
+      const player = await this.playerService.createPlayer({
+        telegramId: chatId,
+        name: playerName,
+        health: 100,
+        level: 0,
+        inventory: []
+      });
+
       this.editOrSendMessage(chatId, `${player.name} добро пожаловать в игру. Жми сразится для начала боя.`,
         this.getMainMenu());
     });
 
-    this.bot.onText(/\/players/, (msg) => {
+    this.bot.onText(/\/players/, async (msg) => {
       const chatId = msg.chat.id;
-      const players = Array.from(this.game.players.values());
+      const players = await this.playerService.getPlayers();
       if (players.length === 0) {
         this.editOrSendMessage(chatId, 'Нет зарегистрированных игроков.');
         return;
@@ -44,18 +55,17 @@ export class TelegramModule implements OnModuleInit {
       this.editOrSendMessage(chatId, `Зарегистрированные игроки:\n${playerList}`);
     });
 
-    this.bot.onText(/\/fight/, (msg) => {
+    this.bot.onText(/\/fight/, async (msg) => {
       const chatId = msg.chat.id;
-      const player = this.game.getPlayer(chatId);
+      const player = await this.playerService.getPlayer(chatId);
 
       if (!player) {
-        this.editOrSendMessage(chatId, 'Вы не зарегистрированы. Используйте команду /register <имя> для регистрации.');
+        this.editOrSendMessage(chatId, 'Вы не зарегистрированы. Используйте команду /start <имя> для регистрации.');
         return;
       }
 
-      const buttons: InlineKeyboardButton[][] = Array.from(this.game.players.values())
-        .filter(p => p.id !== chatId)
-        .map(p => [{ text: p.name, callback_data: `fight_${p.id}` }]);
+      const buttons: InlineKeyboardButton[][] = (await this.playerService.getPlayers(chatId))
+        .map(p => [{ text: p.name, callback_data: `fight_${p.telegramId}` }]);
 
       if (buttons.length === 0) {
         this.editOrSendMessage(chatId, 'Нет доступных противников.');
@@ -74,29 +84,32 @@ export class TelegramModule implements OnModuleInit {
       if (!chatId) return;
 
       if (query.data === 'show_players') {
-        const players = Array.from(this.game.players.values());
+        const players = await this.playerService.getPlayers();
+
         if (players.length === 0) {
           this.editOrSendMessage(chatId, 'Нет зарегистрированных игроков.');
+
           return;
         }
+
         const playerList = players.map(player => `${player.name}`).join('\n');
+
         this.editOrSendMessage(chatId, `Зарегистрированные игроки:\n${playerList}`, this.getMainMenu());
       }
 
       if (query.data === 'fight') {
-        const player = this.game.getPlayer(chatId);
+        const player = await this.playerService.getPlayer(chatId);
 
         if (!player) {
           this.editOrSendMessage(chatId, 'Вы не зарегистрированы. Используйте команду /register <имя> для регистрации.');
           return;
         }
 
-        const buttons: InlineKeyboardButton[][] = Array.from(this.game.players.values())
-          .filter(p => p.id !== chatId)
-          .map(p => [{ text: p.name, callback_data: `fight_${p.id}` }]);
+        const buttons: InlineKeyboardButton[][] = (await this.playerService.getPlayers(player.telegramId))
+          .map(p => [{ text: p.name, callback_data: `fight_${p.telegramId}` }]);
 
         if (buttons.length === 0) {
-          this.editOrSendMessage(chatId, 'Нет доступных противников.');
+          this.editOrSendMessage(chatId, 'Нет доступных противников.', this.getMainMenu());
         } else {
           this.editOrSendMessage(chatId, 'Выберите противника:', {
             reply_markup: {
@@ -108,8 +121,8 @@ export class TelegramModule implements OnModuleInit {
 
       if (query.data?.startsWith('fight_')) {
         const opponentId = parseInt(query.data.split('_')[1]);
-        const player = this.game.getPlayer(chatId);
-        const opponent = this.game.getPlayer(opponentId);
+        const player = await this.playerService.getPlayer(chatId);
+        const opponent = await this.playerService.getPlayer(opponentId);
 
         if (!player || !opponent) {
           this.editOrSendMessage(chatId, 'Произошла ошибка. Попробуйте снова.');
@@ -121,26 +134,26 @@ export class TelegramModule implements OnModuleInit {
         const message = `Начался бой между ${player.name} и ${opponent.name}\n`;
 
         this.editOrSendMessage(chatId, message, this.getBattleMenu());
-        if (opponent.id !== 0) {
-          this.editOrSendMessage(opponent.id, message, this.getBattleMenu());
+        if (opponent.telegramId !== 0) {
+          this.editOrSendMessage(opponent.telegramId, message, this.getBattleMenu());
         }
       }
 
       if (query.data === 'hit') {
         const battle = this.game.getBattle(chatId);
 
-        if (battle.isFinished) {
+        if (!battle || battle.isFinished) {
           this.editOrSendMessage(chatId, 'Бой уже закончен', this.getMainMenu());
           return;
         }
 
         const result = battle.hit();
-        const opponent = battle.opponent.id === chatId ? battle.player : battle.opponent;
+        const opponent = battle.opponent.telegramId === chatId ? battle.player : battle.opponent;
         const menu = battle.isFinished ? this.getMainMenu() : this.getBattleMenu();
 
         this.editOrSendMessage(chatId, result, menu);
         if (opponent.id !== 0) {
-          this.editOrSendMessage(opponent.id, result, menu);
+          this.editOrSendMessage(opponent.telegramId, result, menu);
         }
       }
     });
