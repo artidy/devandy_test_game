@@ -8,7 +8,7 @@ export class PlayerEntity implements Player {
   id: number;
 
   @Column({ unique: true })
-  telegramId: number;
+  telegramId: string;
 
   @Column()
   name: string;

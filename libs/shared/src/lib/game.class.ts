@@ -4,7 +4,7 @@ import { Battle } from './battle.interface';
 import { BattleClass } from './battle.class';
 
 export class GameClass implements Game {
-  battles: Map<number, Battle> = new Map();
+  battles: Map<string, Battle> = new Map();
 
   addBattle(player: Player, opponent: Player): Battle {
     const battle: Battle = new BattleClass(player, opponent);
@@ -15,7 +15,7 @@ export class GameClass implements Game {
     return battle;
   }
 
-  getBattle(id: number): Battle | undefined {
+  getBattle(id: string): Battle | undefined {
     return this.battles.get(id);
   }
 }

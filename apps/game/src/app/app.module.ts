@@ -27,7 +27,7 @@ import { PlayerModule } from './player/player.module';
     }),
     RedisModule,
     PlayerModule,
-    TelegramModule
+    TelegramModule,
   ],
 })
 export class AppModule {}

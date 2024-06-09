@@ -12,7 +12,7 @@ class EnvironmentsConfig {
   @IsString({
     message: EnvValidationMessage.TelegramChanelIdNotRequired
   })
-  public TELEGRAM_CHANNEL_ID: string;
+  public GAME_URL: string;
 
   @IsString({
     message: EnvValidationMessage.TelegramChanelIdNotRequired

@@ -2,7 +2,7 @@ import { Player } from './player.interface';
 import { Battle } from './battle.interface';
 
 export interface Game {
-  battles: Map<number, Battle>;
+  battles: Map<string, Battle>;
   addBattle(player: Player, opponent: Player): Battle;
-  getBattle(id: number): Battle | undefined;
+  getBattle(id: string): Battle | undefined;
 }

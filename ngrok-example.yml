@@ -1,0 +1,11 @@
+version: "2"
+authtoken: YOUR_AUTH_TOKEN
+tunnels:
+  first-app:
+    proto: http
+    addr: 8080
+    host_header: rewrite
+  second-app:
+    proto: http
+    addr: 8081
+    host_header: rewrite

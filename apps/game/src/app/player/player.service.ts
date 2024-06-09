@@ -15,7 +15,7 @@ export class PlayerService {
     private readonly redisService: RedisService,
   ) {}
 
-  async getPlayers(excludeId?: number): Promise<Player[]> {
+  async getPlayers(excludeId?: string): Promise<Player[]> {
     if (excludeId) {
       return await this.playerRepository.find({ where: { telegramId: Not(excludeId) } });
     }
@@ -23,7 +23,7 @@ export class PlayerService {
     return await this.playerRepository.find();
   }
 
-  async getPlayer(telegramId: number): Promise<Player> {
+  async getPlayer(telegramId: string): Promise<Player> {
     const cachedPlayer = await this.redisService.get(`player:${telegramId}`);
 
     if (cachedPlayer) {
@@ -53,7 +53,7 @@ export class PlayerService {
     return player;
   }
 
-  async updatePlayer(telegramId: number, updateData: Partial<PlayerEntity>): Promise<Player> {
+  async updatePlayer(telegramId: string, updateData: Partial<PlayerEntity>): Promise<Player> {
     await this.playerRepository.update({ telegramId }, updateData);
     const updatedPlayer = await this.getPlayer(telegramId);
 
@@ -64,8 +64,8 @@ export class PlayerService {
     return updatedPlayer;
   }
 
-  async deletePlayer(playerId: number): Promise<void> {
-    await this.playerRepository.delete(playerId);
-    await this.redisService.del(`player:${playerId}`);
+  async deletePlayer(telegramId: string): Promise<void> {
+    await this.playerRepository.delete({ telegramId });
+    await this.redisService.del(`player:${telegramId}`);
   }
 }
