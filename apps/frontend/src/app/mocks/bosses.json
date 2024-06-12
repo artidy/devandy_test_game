@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "telegramId": "",
+    "name": "Гоблин предатель",
+    "health": 2000,
+    "level": 10,
+    "imgUrl": "assets/images/bosses/goblin.png",
+    "defence": 50,
+    "attackSpeed": 200,
+    "damage": [
+      150,
+      200
+    ],
+    "resistance": 40,
+    "drop": [
+      "Простой меч",
+      "Копье",
+      "Броня"
+    ],
+    "skills": [
+      {
+        "id": 1,
+        "name": "Обычный удар",
+        "cooldown": 0
+      },
+      {
+        "id": 2,
+        "name": "Мощный удар",
+        "cooldown": 3
+      },
+      {
+        "id": 3,
+        "name": "Крик боевого ужаса",
+        "cooldown": 4
+      },
+      {
+        "id": 4,
+        "name": "Щит возмездия",
+        "cooldown": 5
+      }
+    ]
+  }
+]
